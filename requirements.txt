@@ -10,4 +10,7 @@ matplotlib==3.8.4
 opencv-python==4.9.0.80
 firebase-admin==6.5.0
 asyncio==3.4.3
+eventlet==0.37.0
+google-auth==2.29.0
+
 

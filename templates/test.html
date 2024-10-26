@@ -3,10 +3,24 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Flask API Test</title>
+    <title>Blind Safe Flask Api</title>
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <script>
+      const socket = io();
+      socket.on('hello', (data) => {
+          console.log(data.message);
+      });
+      socket.on('connect', () => {
+          console.log("Connected to the server");
+      });
+      socket.on('disconnect', () => {
+          console.log("Disconnected from the server");
+      });
+  </script>
     <style>
       body {
         display: flex;
+        flex-direction: column;
         justify-content: center;
         align-items: center;
         height: 100vh;
@@ -18,7 +32,8 @@
     </style>
   </head>
   <body>
-    <h2>Huttooo mee ahapn oya eka eka paksha walata puka denna epaa.....</h2>
-    <h4>helloo Blind safe pakayalaa meka thamai apita thiyana ekama vinode hutto...</h4>
+    <h2>Welcome to Blindsafe flask API..!</h2></br>
+    <h4>Api Running on port number 5000.</h4>
+    
   </body>
 </html>
