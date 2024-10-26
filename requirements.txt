@@ -7,10 +7,9 @@ Pillow==10.3.0
 google-generativeai==0.7.2
 twilio==9.3.0
 matplotlib==3.8.4
-opencv-python==4.9.0.80
+opencv-python-headless==4.9.0.80
 firebase-admin==6.5.0
 asyncio==3.4.3
 eventlet==0.37.0
 google-auth==2.29.0
-
 
