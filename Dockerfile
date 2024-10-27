@@ -26,5 +26,4 @@ COPY . .
 EXPOSE 5000
 
 # Start the application
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "-k", "eventlet", "--timeout", "120", "app:app"]
-
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "-w", "1", "-k", "eventlet", "--timeout", "480", "--preload", "app:app"]

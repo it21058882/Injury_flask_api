@@ -19,6 +19,7 @@ import firebase_admin
 from firebase_admin import credentials, storage
 import asyncio
 from google.oauth2 import service_account
+import threading
 
 # Load environment variables from .env file
 load_dotenv()
@@ -38,10 +39,14 @@ socketio = SocketIO(
     engineio_logger=True,
     path="/socket.io",
 )
+def load_models():
+    global injury_model, wound_model
+    injury_model = YOLO("./models/injury_detection.pt")
+    wound_model = YOLO("./models/wound_detection.pt")
+    print("Models loaded successfully.")
 
-# Load the YOLO model for injury detection
-injury_model = YOLO("./models/injury_detection.pt")
-wound_model = YOLO("./models/wound_detection.pt")
+# Start loading models in a background thread
+threading.Thread(target=load_models).start()
 
 # Dictionary to hold recent detections
 recent_detections = {}
