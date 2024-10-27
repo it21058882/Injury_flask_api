@@ -313,13 +313,13 @@ def upload_to_gemini(injury_frame, wound):
 
 
 def upload_to_firebase(injury_frame):
-    
     firebase_key_path = "./credentials.json"
-    # Initialize Firebase
-    cred = credentials.Certificate(firebase_key_path)
-    firebase_admin.initialize_app(
-        cred, {"storageBucket": "blindsafe-7acfd.appspot.com"}
-    )
+    
+    # Initialize Firebase only if not already initialized
+    if not firebase_admin._apps:
+        cred = credentials.Certificate(firebase_key_path)
+        firebase_admin.initialize_app(cred, {"storageBucket": "blindsafe-7acfd.appspot.com"})
+    
     bucket = storage.bucket()
     timestamp = time.strftime("%Y%m%d-%H%M%S")
     filename = f"wound_images/{timestamp}_injury.jpg"
@@ -337,8 +337,6 @@ def upload_to_firebase(injury_frame):
 
     print(blob.public_url)
     return blob.public_url
-
-
 
 if __name__ == "__main__":
     print("Starting Socket.IO server")
