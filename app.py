@@ -18,6 +18,7 @@ import pathlib
 import firebase_admin
 from firebase_admin import credentials, storage
 import asyncio
+from google.generativeai.types import generation_types
 from google.oauth2 import service_account
 import threading
 
@@ -113,11 +114,10 @@ def handle_injury_detection(data):
 
             # Save the cropped injury image for debugging
             injury_debug_image = Image.fromarray(detected_injury_frame)
-            injury_debug_image.save("detected_injury_debug.jpg")
-
-            # Convert cropped image to base64
+           
+             # Convert the entire frame (no cropping) to base64
             buffered = BytesIO()
-            injury_debug_image.save(buffered, format="JPEG")
+            Image.fromarray(frame).save(buffered, format="JPEG")  # Using original frame
             injury_image_base64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
 
             # Generate a unique request ID
@@ -191,8 +191,27 @@ async def wound_detection_function():
             wound_type = wound_classification[0].names[np.argmax(confidences)]
 
             final_val = upload_to_gemini(injury_frame, wound_type)
+            if final_val == "No response available":
+                if wound_type == 'cut':
+                    final_val = "Apply pressure to stop bleeding, clean the wound, and cover with a sterile bandage."
+                elif wound_type == 'abrasions':
+                    final_val = "Clean the wound gently with water, apply an antibiotic ointment, and cover with a bandage."
+                elif wound_type == 'burns':
+                    final_val = "Cool the burn with cool (not cold) water, cover with a sterile bandage, and avoid popping blisters."
+                elif wound_type == 'laseration':
+                    final_val = "Clean the wound, apply pressure if bleeding, and consider seeking medical attention if deep."
+                elif wound_type == 'stab_wound':
+                    final_val = "Apply direct pressure to stop bleeding, cover with a sterile bandage, and seek immediate medical attention."
+                elif wound_type == 'ingrown_nail':
+                    final_val = "Soak the foot in warm water, gently lift the nail, and place a small piece of cotton under it to reduce pressure."
+                elif wound_type == 'bruises':
+                    final_val = "Apply ice to the bruised area for 15-20 minutes to reduce swelling. Keep the area elevated if possible."
+                else:
+                    final_val = "No specific advice available. Ensure the wound is clean and consider seeking medical attention."
+
+            
             image_url = upload_to_firebase(injury_frame)
-            await  send_whatsapp_message(image_url, final_val, wound_type, contact)
+            await  send_whatsapp_message(image_url, final_val, wound_type, contact, username)
             recent_detections.clear()
         else:
             wound_type = "Unknown"
@@ -206,7 +225,7 @@ async def wound_detection_function():
         return jsonify({"error": str(e)}), 500
 
 
-async def send_whatsapp_message(image_url, gemini_response, wound_type, phone_number):
+async def send_whatsapp_message(image_url, gemini_response, wound_type, phone_number, name):
     # Twilio credentials
     account_sid = os.getenv("TWILLIO_ACCOUNT_SID")
     auth_token = os.getenv("TWILLIO_AUTH_TOKEN")
@@ -217,8 +236,8 @@ async def send_whatsapp_message(image_url, gemini_response, wound_type, phone_nu
 
     # Format the message (combining text and image)
     message_body = (
-        f"Dear,\n\n"
-        f"I wanted to inform you that has an injury identified as: {wound_type}. "
+        f"Dear {name},\n\n"
+        f"I wanted to inform you that has an injury identified as {wound_type}. "
         f"The wound appears to be {gemini_response}.\n\n"
         "Please monitor the situation and consider seeking medical attention if it worsens.\n\n"
         f"Wound Type: {wound_type}"
@@ -282,30 +301,24 @@ def upload_to_gemini(injury_frame, wound):
         f"For deep cuts or stab wounds, suggest applying pressure and seeking medical attention. "
         f"Do not include any disclaimers or advice such as 'consult a professional.' Just give practical advice."
     )
-    convo.send_message(image_data)
-    return convo.last.text
+    # Attempt to send the image
+    try:
+        convo.send_message(image_data)
+    except generation_types.BlockedPromptException as e:
+        print("Image was blocked by Gemini API.")
+        # Log or handle the blocked prompt gracefully
+    
+    return convo.last.text if convo.last else "No response available"
 
 
 
 def upload_to_firebase(injury_frame):
     
-    firebase_credentials = {
-        "type": os.getenv("FIREBASE_TYPE"),
-        "project_id": os.getenv("FIREBASE_PROJECT_ID"),
-        "private_key_id": os.getenv("FIREBASE_PRIVATE_KEY_ID"),
-        "private_key": os.getenv("FIREBASE_PRIVATE_KEY").replace("\\n", "\n"),
-        "client_email": os.getenv("FIREBASE_CLIENT_EMAIL"),
-        "client_id": os.getenv("FIREBASE_CLIENT_ID"),
-        "auth_uri": os.getenv("FIREBASE_AUTH_URI"),
-        "token_uri": os.getenv("FIREBASE_TOKEN_URI"),
-        "auth_provider_x509_cert_url": os.getenv("FIREBASE_AUTH_PROVIDER_X509_CERT_URL"),
-        "client_x509_cert_url": os.getenv("FIREBASE_CLIENT_X509_CERT_URL"),
-        "universe_domein": os.getenv("UNIVERSE_DOMAIN"),
-    }
-    
-    cred = service_account.Credentials.from_service_account_info(firebase_credentials)
+    firebase_key_path = "./credentials.json"
+    # Initialize Firebase
+    cred = credentials.Certificate(firebase_key_path)
     firebase_admin.initialize_app(
-        cred, {"storageBucket": os.getenv("FIREBASE_STORAGE_BUCKET")}
+        cred, {"storageBucket": "blindsafe-7acfd.appspot.com"}
     )
     bucket = storage.bucket()
     timestamp = time.strftime("%Y%m%d-%H%M%S")
