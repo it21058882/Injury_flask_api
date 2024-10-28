@@ -318,7 +318,7 @@ def upload_to_firebase(injury_frame):
     # Initialize Firebase only if not already initialized
     if not firebase_admin._apps:
         cred = credentials.Certificate(firebase_key_path)
-        firebase_admin.initialize_app(cred, {"storageBucket": "blindsafe-7acfd.appspot.com"})
+        firebase_admin.initialize_app(cred, {"storageBucket": "blindsafe-b24ff.appspot.com"})
     
     bucket = storage.bucket()
     timestamp = time.strftime("%Y%m%d-%H%M%S")
